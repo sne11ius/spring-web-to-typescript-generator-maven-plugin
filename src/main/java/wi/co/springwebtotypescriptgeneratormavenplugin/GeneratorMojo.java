@@ -1,6 +1,8 @@
 package wi.co.springwebtotypescriptgeneratormavenplugin;
 
-import static java.nio.file.Files.*;
+import static java.nio.file.Files.walk;
+import static java.nio.file.Files.walkFileTree;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
@@ -10,15 +12,13 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import me.tomassetti.symbolsolver.model.resolution.TypeSolver;
-import me.tomassetti.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
-import me.tomassetti.symbolsolver.resolution.typesolvers.JavaParserTypeSolver;
-import me.tomassetti.symbolsolver.resolution.typesolvers.JreTypeSolver;
+
 import wi.co.springwebtotypescriptgeneratormavenplugin.extractor.RestServiceExtractor;
 import wi.co.springwebtotypescriptgeneratormavenplugin.model.ServiceClass;
 
@@ -33,6 +33,9 @@ public class GeneratorMojo extends AbstractMojo {
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
+		TypeUtil.source = source;
+		LogUtil.log = getLog();
+
 		getLog().info("Generating typescript bindings");
 		getLog().info("Searching for java sources in " + source);
 		getLog().info("Target: " + target);
@@ -42,11 +45,12 @@ public class GeneratorMojo extends AbstractMojo {
 				@Override
 				public FileVisitResult visitFile(final Path file, final BasicFileAttributes attributes) throws IOException {
 					if (file.toString().endsWith(".java")) {
-						serviceClasses.addAll(new RestServiceExtractor(file, getLog()).extractServiceClasses());
+						serviceClasses.addAll(new RestServiceExtractor(file).extractServiceClasses());
 					}
 					return FileVisitResult.CONTINUE;
 				}
 			});
+			getLog().info("Found services: " + serviceClasses);
 			generateTypeScriptServices(serviceClasses);
 		}
 		catch (final IOException e) {
@@ -60,23 +64,11 @@ public class GeneratorMojo extends AbstractMojo {
 	}
 
 	private void initTargetDirectory() throws IOException {
-		if (!target.exists()) {
-			getLog().info("Creating target dir " + target);
-			target.mkdirs();
-		} else {
-			getLog().info("Clearing target dir " + target);
-			Files.walk(target.toPath())
-	            .filter(Files::isRegularFile)
-	            .map(Path::toFile)
-	            .forEach(File::delete);
-		}
-	}
-
-	private TypeSolver getTypeSolver() {
-		return new CombinedTypeSolver(
-			new JreTypeSolver(),
-			new JavaParserTypeSolver(source)
-		);
+		target.mkdirs();
+		walk(target.toPath())
+            .filter(Files::isRegularFile)
+            .map(Path::toFile)
+            .forEach(File::delete);
 	}
 
 }
