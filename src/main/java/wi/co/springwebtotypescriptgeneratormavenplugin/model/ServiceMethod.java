@@ -13,11 +13,13 @@ import lombok.ToString;
 @EqualsAndHashCode
 public class ServiceMethod {
 
+	public final String resultType;
 	public final String name;
 	public final RequestMappingAnnotation requestMappingAnnotation;
 	public final List<RequestParameter> parameters;
 
-	private ServiceMethod(final String name, final RequestMappingAnnotation requestMappingAnnotation, final List<RequestParameter> parameters) {
+	private ServiceMethod(final String resultType, final String name, final RequestMappingAnnotation requestMappingAnnotation, final List<RequestParameter> parameters) {
+		this.resultType = resultType;
 		this.name = name;
 		this.requestMappingAnnotation = requestMappingAnnotation;
 		this.parameters = parameters;
@@ -28,10 +30,11 @@ public class ServiceMethod {
 	}
 
 	public static ServiceMethod parse(final MethodDeclaration method) {
+		final String resultType = method.getType().toString();
 		final String name = method.getNameAsString();
 		final RequestMappingAnnotation requestMappingAnnotation = RequestMappingAnnotation.parse(method).get();
 		final List<RequestParameter> parameters = parseParameters(method);
-		return new ServiceMethod(name, requestMappingAnnotation, parameters);
+		return new ServiceMethod(resultType, name, requestMappingAnnotation, parameters);
 	}
 
 	private static List<RequestParameter> parseParameters(final MethodDeclaration method) {
